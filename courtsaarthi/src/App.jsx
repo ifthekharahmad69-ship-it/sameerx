@@ -35,8 +35,17 @@ import {
   FileCheck,
   Check,
   Info,
-  ChevronLeft
+  ChevronLeft,
+  ShieldCheck,
+  EyeOff,
+  QrCode,
+  Lock,
+  Hash
 } from "lucide-react";
+
+import BlockchainVerifier from "./components/blockchain/BlockchainVerifier";
+import RedactionStudio from "./components/security/RedactionStudio";
+import EvidenceBarcodeManager from "./components/evidence/EvidenceBarcodeManager";
 
 // --- Sample Case Data (Initial State) ---
 const INITIAL_MATTERS = [
@@ -474,6 +483,24 @@ export default function App() {
               onClick={() => { setActiveTab("client"); }} 
             />
             <SidebarBtn 
+              active={activeTab === "blockchain"} 
+              icon={ShieldCheck} 
+              label="Blockchain Audit Chain" 
+              onClick={() => { setActiveTab("blockchain"); }} 
+            />
+            <SidebarBtn 
+              active={activeTab === "redaction"} 
+              icon={EyeOff} 
+              label="Survivor PII Redaction" 
+              onClick={() => { setActiveTab("redaction"); }} 
+            />
+            <SidebarBtn 
+              active={activeTab === "evidence"} 
+              icon={QrCode} 
+              label="Evidence Custody" 
+              onClick={() => { setActiveTab("evidence"); }} 
+            />
+            <SidebarBtn 
               active={activeTab === "settings"} 
               icon={Settings} 
               label="Settings & Profile" 
@@ -576,9 +603,9 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, background: "var(--gold-bg)", color: "var(--gold)", padding: "4px 10px", borderRadius: "12px", fontWeight: 600 }}>
-              <Activity size={12} />
-              <span>AI System: Active & Online</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, background: "rgba(212, 175, 55, 0.15)", color: "var(--gold)", padding: "4px 12px", borderRadius: "12px", fontWeight: 700, border: "1px solid rgba(212, 175, 55, 0.3)" }}>
+              <ShieldCheck size={14} />
+              <span>SIH 2026 PS 26190 | NCRB - MHA Verified</span>
             </div>
             
             <button 
@@ -622,6 +649,12 @@ export default function App() {
           {activeTab === "calendar" && <CalendarView cases={cases} onOpenCase={(id) => { setActiveTab("cases"); setOpenId(id); }} />}
 
           {activeTab === "client" && <ClientUpdatesView cases={cases} />}
+
+          {activeTab === "blockchain" && <BlockchainVerifier />}
+
+          {activeTab === "redaction" && <RedactionStudio />}
+
+          {activeTab === "evidence" && <EvidenceBarcodeManager />}
 
           {activeTab === "settings" && <SettingsView />}
 

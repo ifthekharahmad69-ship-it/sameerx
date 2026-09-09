@@ -1,12 +1,21 @@
 import os, json, re
 from openai import OpenAI
+from dotenv import load_dotenv
 from db.supabase_client import supabase
 
+load_dotenv(override=True)
+
 # This is Groq — OpenAI SDK pointed at Groq's endpoint (same as the analyzer)
+groq_key = (os.environ.get("GROQ_API_KEY") or os.environ.get("XAI_API_KEY") or "").strip()
+if groq_key.startswith("agsk_"):
+    groq_key = groq_key[1:]
+
 client = OpenAI(
-    api_key=os.environ["XAI_API_KEY"],          # your Groq key
+    api_key=groq_key,
     base_url="https://api.groq.com/openai/v1",
 )
+
+MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
 
 TEMPLATES = {
     "bail_application": {
@@ -166,7 +175,7 @@ def generate_draft(doc_type, source_doc_ids):
     )
 
     resp = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
     )

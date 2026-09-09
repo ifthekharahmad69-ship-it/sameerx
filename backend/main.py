@@ -11,8 +11,11 @@ from routers.analyze import router as analyze_router
 from routers.draft import router as draft_router
 from routers.sarvam import router as sarvam_router
 from routers.similar_cases import router as similar_cases_router
+from routers.blockchain import router as blockchain_router
+from routers.redaction import router as redaction_router
+from routers.evidence import router as evidence_router
 
-app = FastAPI(title="CaseSaarthi API")
+app = FastAPI(title="CourtSaarthi SIH 2026 PS 26190 API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +32,9 @@ app.include_router(analyze_router, prefix="/api")
 app.include_router(draft_router, prefix="/api")
 app.include_router(sarvam_router, prefix="/api")
 app.include_router(similar_cases_router, prefix="/api/similar-cases")
+app.include_router(blockchain_router, prefix="/api")
+app.include_router(redaction_router, prefix="/api")
+app.include_router(evidence_router, prefix="/api")
 
 @app.get("/api/health")
 async def health():

@@ -5,16 +5,17 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# We load the key you set in XAI_API_KEY, but since it's a Groq key (gsk_...),
-# we configure the OpenAI client to use the Groq API endpoint!
-GROQ_API_KEY = os.environ.get("XAI_API_KEY")
+# We load the Groq key (configured via GROQ_API_KEY or XAI_API_KEY)
+GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or os.environ.get("XAI_API_KEY") or "").strip()
+if GROQ_API_KEY.startswith("agsk_"):
+    GROQ_API_KEY = GROQ_API_KEY[1:]
 
 client = AsyncOpenAI(
     api_key=GROQ_API_KEY,
     base_url="https://api.groq.com/openai/v1",
 )
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
 
 async def extract_case_facts(raw_text: str, case_type: str) -> dict:
     """Extract case facts from legal document text using Groq."""
