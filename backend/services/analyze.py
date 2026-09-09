@@ -45,32 +45,56 @@ async def extract_with_quotes(raw_text: str) -> dict:
         "- 'suggested_sections' = offence sections you INFER from described facts, "
         "even though the number is NOT written in the document.\n"
         "- If something is not present, omit it. Do not invent quotes.\n\n"
-        f"DOCUMENT TEXT:\n{raw_text}"
+        f"DOCUMENT TEXT:\n{raw_text[:5000]}"
     )
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "system", "content": system},
-                  {"role": "user", "content": user}],
-        temperature=0.0,
-    )
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
+    
+    candidate_models = [MODEL, "groq/compound", "openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+    seen = set()
+    models_to_try = [m for m in candidate_models if not (m in seen or seen.add(m))]
+
+    for m in models_to_try:
         try:
-            m = re.search(r"\{.*\}", text, re.DOTALL)
-            if m:
-                # Attempt to repair common syntax errors (e.g. quote ends with ] instead of })
-                fixed_text = m.group(0)
-                fixed_text = re.sub(r'("quote":\s*"[^"]*")[ \t]*\]', r'\1}', fixed_text)
-                fixed_text = re.sub(r'("basis_fact":\s*"[^"]*")[ \t]*\]', r'\1}', fixed_text)
-                return json.loads(fixed_text)
-        except Exception as repair_err:
-            print(f"JSON repair failed: {repair_err}")
-        return {
-            "facts": {}, "named_sections": [], "suggested_sections": []
-        }
+            response = await client.chat.completions.create(
+                model=m,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+                temperature=0.0,
+                max_tokens=800,
+            )
+            text = response.choices[0].message.content.strip()
+            text = text.replace("```json", "").replace("```", "").strip()
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                m_match = re.search(r"\{.*\}", text, re.DOTALL)
+                if m_match:
+                    fixed_text = m_match.group(0)
+                    fixed_text = re.sub(r'("quote":\s*"[^"]*")[ \t]*\]', r'\1}', fixed_text)
+                    fixed_text = re.sub(r'("basis_fact":\s*"[^"]*")[ \t]*\]', r'\1}', fixed_text)
+                    return json.loads(fixed_text)
+        except Exception as e:
+            print(f"Model {m} failed in extract_with_quotes: {e}")
+            continue
+
+    # Resilient fallback: Regex-based extraction if LLMs are rate-limited or unavailable
+    facts = {}
+    named_sections = []
+    
+    # Extract FIR / Case Number
+    fir_match = re.search(r'(?:FIR\s*(?:No\.?|Number)?|Case\s*(?:No\.?|Number)?)\s*[:\-]?\s*([A-Za-z0-9\/\-]+)', raw_text, re.IGNORECASE)
+    if fir_match:
+        facts["case_number"] = {"value": fir_match.group(0), "quote": fir_match.group(0)}
+
+    # Extract BNS / IPC sections
+    sec_matches = re.finditer(r'\b(?:Sections?|u\/s|Sec\.?|IPC|BNS)\s*([0-9A-Za-z,\s\/\-]+(?:\bIPC|\bBNS)?)', raw_text, re.IGNORECASE)
+    for sm in sec_matches:
+        named_sections.append({"section": sm.group(0).strip(), "quote": sm.group(0).strip()})
+
+    return {
+        "facts": facts,
+        "named_sections": named_sections[:5],
+        "suggested_sections": []
+    }
 
 
 def _find_span(raw_text: str, quote: str):

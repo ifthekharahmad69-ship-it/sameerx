@@ -174,17 +174,26 @@ def generate_draft(doc_type, source_doc_ids):
         f"SOURCE:\n{source}"
     )
 
-    resp = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-    )
-    txt = resp.choices[0].message.content.strip()
-    txt = re.sub(r"^```json|```$", "", txt).strip()
-    try:
-        draft = json.loads(txt)
-    except Exception:
-        draft = {"title": doc_type, "body": txt}
+    candidate_models = [MODEL, "groq/compound", "openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+    draft = None
+    for m in candidate_models:
+        try:
+            resp = client.chat.completions.create(
+                model=m,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=800,
+            )
+            txt = resp.choices[0].message.content.strip()
+            txt = re.sub(r"^```json|```$", "", txt).strip()
+            draft = json.loads(txt)
+            break
+        except Exception as e:
+            print(f"Model {m} failed in generate_draft: {e}")
+            continue
+
+    if not draft:
+        draft = {"title": doc_type, "body": f"Draft document for {doc_type}. Please verify details against the case docket."}
 
     # Clean nested JSON strings in the body
     for _ in range(3):
